@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.10">
-<title>作業記録</title>
+<title>1-1. TERASOLUNAチュートリアルその1</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -438,20 +438,151 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article data-line-1">
 <div id="header">
-<h1>作業記録</h1>
+<h1>1-1. TERASOLUNAチュートリアルその1</h1>
 </div>
 <div id="content">
-<div class="sect2 data-line-3">
-<h3 id="_初心者の館">初心者の館</h3>
+<div id="preamble">
+<div class="sectionbody">
 <div class="paragraph data-line-5">
-<p><a href="https://takumiosawa.github.io/Report/hall1-1.html">1-1.TERASOLUNAチュートリアルその1</a></p>
+<p><a href="http://terasolunaorg.github.io/guideline/5.7.0.RELEASE/ja/Tutorial/TutorialTodo.html">元記事</a></p>
+</div>
+<div class="paragraph data-line-7">
+<p>元記事と異なり、IntelliJ IDEA Ultimate 2021.1.1で取り組んだ。<br>
+また、サーブレットコンテナとしてはJettyを採用した。</p>
+</div>
+<hr>
+</div>
+</div>
+<div class="sect2 data-line-12">
+<h3 id="_1_mavenのインストール">1. Mavenのインストール</h3>
+<div class="paragraph data-line-14">
+<p>TERASOLUNAはGradleをサポートしない方針としているため、ビルドツールはMaven一択となる。<br>
+Amazon Workspaceのターミナルで以下を実施し、Mavenをインストールする。</p>
+</div>
+<div class="listingblock data-line-18">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">sudo wget http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo
+sudo sed -i s/\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo
+sudo yum install -y apache-maven
+mvn --version</code></pre>
+</div>
+</div>
+<hr>
+</div>
+<div class="sect2 data-line-27">
+<h3 id="_2_プロジェクトの構築">2. プロジェクトの構築</h3>
+<div class="paragraph data-line-29">
+<p>任意の場所で以下のコマンドを実行し、プロジェクトを作成する。</p>
+</div>
+<div class="listingblock data-line-32">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">mvn archetype:generate -B -DarchetypeGroupId=org.terasoluna.gfw.blank -DarchetypeArtifactId=terasoluna-gfw-web-blank-archetype -DarchetypeVersion=5.7.0.RELEASE -DgroupId=com.example.todo -DartifactId=todo -Dversion=1.0.0-SNAPSHOT</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-36">
+<p>上記で作成したプロジェクトをIntelliJのOpen Projectで読み込む。<br>
+Mavenのビルドスクリプトが見つかった旨のポップアップが表示されたら、importを選択する。</p>
+</div>
+<div class="paragraph data-line-39">
+<p>pom.xmlの&lt;plugins&gt;タグに、Jetty利用のための記述を追加する。<br>
+(10.x系以降のStableバージョンでは、他のプラグインが動作しないので9.x系の最新バージョンを選択する)</p>
+</div>
+<div class="listingblock data-line-43">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="xml" class="language-xml hljs">&lt;plugin&gt;
+    &lt;groupId&gt;org.eclipse.jetty&lt;/groupId&gt;
+    &lt;artifactId&gt;jetty-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;9.4.40.v20210413&lt;/version&gt;
+&lt;/plugin&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-51">
+<p>記述が完了したら、一度IntelliJ上でビルドし、ビルドエラーが発生しないことを確認する。<br>
+その後、IntelliJのTerminalで、以下のコマンドを実行する。</p>
+</div>
+<div class="listingblock data-line-55">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs"># todoディレクトリ内で実行すること
+mvn jetty:run</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-60">
+<p>コマンド実行後、<br></p>
+</div>
+<div class="paragraph data-line-62">
+<p>[INFO] Started Jetty Server<br></p>
+</div>
+<div class="paragraph data-line-64">
+<p>がログに出力されることを確認する。<br>
+また、Amazon Workspace上のブラウザにて以下にアクセスし、Hello, world ! のページが表示されることを確認する。</p>
+</div>
+<div class="paragraph data-line-67">
+<p><a href="http://localhost:8080/" class="bare">http://localhost:8080/</a></p>
+</div>
+<hr>
+</div>
+<div class="sect2 data-line-71">
+<h3 id="_3_実装">3. 実装</h3>
+<div class="paragraph data-line-73">
+<p>元記事の11.1.4に従って実装する。<br>
+なお、フィールドやメソッドは一部修正した箇所がある。
+(フィールド名の修正や、メソッドの分割など)</p>
+</div>
+<div class="paragraph data-line-77">
+<p>その他の注意点や、元記事から変更した箇所を補足する。</p>
+</div>
+<div class="paragraph data-line-79">
+<p><strong>■ 1. Todoクラスでのlombokの利用</strong></p>
+</div>
+<div class="paragraph data-line-81">
+<p>IntelliJ Ultimateだとデフォルトでlombokプラグインがインストールされているので利用すると楽である。<br>
+pom.xmlへの&lt;dependency&gt;の追加は以下を確認する。</p>
+</div>
+<div class="paragraph data-line-84">
+<p><a href="https://mvnrepository.com/artifact/org.projectlombok/lombok" class="bare">https://mvnrepository.com/artifact/org.projectlombok/lombok</a></p>
+</div>
+<div class="paragraph data-line-86">
+<p>@Setter/@GetterをTodoクラスに付与することで、アクセサの定義が不要になる。<br>
+アクセサ以外は不要であるため、@Dataは使用しない。</p>
+</div>
+<div class="paragraph data-line-89">
+<p><strong>■ 2.フィールドインジェクトの警告への対応</strong></p>
+</div>
+<div class="paragraph data-line-91">
+<p>Java EEのフィールドインジェクトは非推奨であり、警告が出現するため、コンストラクタインジェクトに置き換える。<br>
+コンストラクタインジェクトでは、DI先のフィールドをprivate finalにできる。</p>
+</div>
+<div class="listingblock data-line-95">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="java" class="language-java hljs">private final TodoRepository todoRepository;
+
+@Inject
+public TodoServiceImpl(TodoRepository todoRepository){
+    this.todoRepository = todoRepository;
+}</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-105">
+<p>(Java EEのコンストラクタインジェクトを用いると、CDI管理Beanの要件を満たすためにデフォルトコンストラクタを明示的に記述する必要がある。はずだが、今回はデフォルトコンストラクタを記述しなくても通った)</p>
+</div>
+<div class="paragraph data-line-107">
+<p><strong>■ 3.スタイルシートの適用</strong></p>
+</div>
+<div class="paragraph data-line-109">
+<p>元記事だと、Todo List用のCSSの記述はstyles.cssに追記することになっているが、追記しても上書きしてもレイアウトが崩れるため、todoStyles.cssを別途作成し、そちらを読み込むようにする。</p>
+</div>
+<div class="paragraph data-line-111">
+<p>TODO 修正できないエラー</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-05-10 15:23:49 +0900
+Last updated 2021-05-10 15:24:02 +0900
 </div>
 </div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+<script>hljs.initHighlighting()</script>
 </body>
 </html>
