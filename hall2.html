@@ -460,37 +460,105 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div class="paragraph data-line-16">
 <p><a href="https://start.spring.io/">Spring Initializr</a>を用いてプロジェクトを準備する。<br>
-ProjectではGradle Projectを選択する。
-また、Java11を利用しない場合はJava8を選択する。</p>
+ProjectではGradle Projectを選択する。</p>
 </div>
-<div class="paragraph data-line-20">
+<div class="paragraph data-line-19">
 <p>zipをダウンロードしたら、Gitで管理しているリポジトリ直下に展開し、IntelliJでオープンする。<br>
 Gradle Scriptが見つかった旨のポップアップが表示されたら、importを選択し、Trust Projectを押下する。<br></p>
 </div>
-<div class="paragraph data-line-23">
+<div class="paragraph data-line-22">
 <p><strong>■ 2. 実行可能にする</strong></p>
 </div>
-<div class="paragraph data-line-25">
+<div class="paragraph data-line-24">
 <p>TutorialApplication.javaを開くと、JDKを選択するように促されるため、Java 11(または8)のJDKを選択する。</p>
 </div>
-<div class="paragraph data-line-27">
+<div class="paragraph data-line-26">
 <p>その後、「View」⇒「Tool Windows」⇒「Gradle」を選択し、buildタスク、bootRunタスクを順に実行する。<br>
 bootRunタスクがExecuting 80％になったら、以下のURLにアクセスし、404エラーが表示されることを確認する。</p>
 </div>
-<div class="paragraph data-line-30">
+<div class="paragraph data-line-29">
 <p><a href="http://localhost:8080/" class="bare">http://localhost:8080/</a></p>
 </div>
-<div class="paragraph data-line-32">
-<p><strong>■ 3. 実装</strong></p>
 </div>
-<div class="paragraph data-line-34">
-<p>TODO</p>
+<div class="sect2 data-line-31">
+<h3 id="_2_実装">2. 実装</h3>
+<div class="paragraph data-line-33">
+<p>元記事をもとに実装する。
+その他の注意点や、元記事から変更した箇所を補足する。</p>
+</div>
+<div class="paragraph data-line-36">
+<p><strong>■ 1.依存関係の追加</strong></p>
+</div>
+<div class="paragraph data-line-38">
+<p>Spring Boot ver 2.3以降の場合、spring-boot-starter-webにjavax.validationが含まれなくなったため、依存関係をビルドスクリプトに追加する必要がある。</p>
+</div>
+<div class="listingblock data-line-41">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="groovy" class="language-groovy hljs">implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-45">
+<p><strong>■ 2.テストの自動生成</strong></p>
+</div>
+<div class="paragraph data-line-47">
+<p>テスト対象のクラスで右クリックし、「Generate」⇒「Test」を選択することで、テストクラスの雛型を自動生成できる。</p>
+</div>
+<div class="paragraph data-line-49">
+<p><strong>■ 3.REST Clientについて</strong></p>
+</div>
+<div class="paragraph data-line-51">
+<p>元記事で採用されているTalend API Testerは起動できなかったため、Advanced REST Clientを用いて動作確認を実施した。</p>
+</div>
+<div class="paragraph data-line-53">
+<p><strong>■ 4.警告への対応</strong></p>
+</div>
+<div class="paragraph data-line-55">
+<p>・フィールドインジェクトをコンストラクタインジェクトに置き換えた。</p>
+</div>
+<div class="paragraph data-line-57">
+<p>・SQLファイルを編集すると以下の警告が出るため対処した。<br>
+　- No data sources are configured to run this sql&#8230;&#8203;<br>
+　　⇒ローカルのデータソースとしてH2を設定した。<br></p>
+</div>
+<div class="paragraph data-line-61">
+<p>　- Sql dialect is not configured<br>
+　　⇒File→Settings→Languages＆Frameworks→SQL Dialectsで、Project SQL DialectsにH2を指定した。</p>
+</div>
+<div class="paragraph data-line-64">
+<p>・テストクラスで以下の警告が発生していたため対処した。<br>
+　- TodoRepositoryTest#testFindByID()で&#8217;Optional.get()' without 'isPresent()' check<br>
+　　⇒Optional#isPresent()メソッドによるチェックを追加した。<br></p>
+</div>
+<div class="paragraph data-line-68">
+<p>　- assertThat(foo).isEqualToComparingFieldByField(bar); が非推奨機能になっている。<br>
+　　⇒assertThat(foo).usingRecursiveComparison().isEqualTo(bar);に置き換える。<br></p>
+</div>
+<div class="paragraph data-line-71">
+<p>　- assertThat(foo).isEqualToIgnoringGivenFields(bar, baz).hasNoNullFieldsOrProperties(); が非推奨機能になっている。<br>
+　　⇒assertThat(foo).usingRecursiveComparison().ignoringFields(baz).isEqualTo(bar);<br>
+　　　assertThat(foo).hasNoNullFieldsOrProperties();に置き換える。</p>
+</div>
+<div class="paragraph data-line-75">
+<p>　- assertThat(foo).isEqualToComparingOnlyGivenFields(bar, baz).hasFieldOrPropertyWithValue(x, y); が非推奨機能になっている。<br>
+　　⇒assertThat(foo).usingRecursiveComparison().ignoringFields(baz以外の全てのメンバを列挙).isEqualTo(bar);<br>
+    　　　assertThat(foo).hasFieldOrPropertyWithValue(x, y);に置き換える。<br>
+    　　⇒<strong>より良い方法があるかどうか確認したい。</strong></p>
+</div>
+<div class="paragraph data-line-81">
+<p><strong>■ 4.その他の質問事項</strong></p>
+</div>
+<div class="paragraph data-line-83">
+<p>・TodoRepositoryTest#testUpdateById()が通らない。<br>
+　⇒todoの状態が更新されるため。通らないのが正しい？</p>
+</div>
+<div class="paragraph data-line-86">
+<p>・MochitoのwillDoNothing()の使い所、目的について理解したい。</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-05-10 17:04:41 +0900
+Last updated 2021-06-04 21:51:57 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
