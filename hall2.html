@@ -510,55 +510,61 @@ bootRunタスクがExecuting 80％になったら、以下のURLにアクセス�
 <p>元記事で採用されているTalend API Testerは起動できなかったため、Advanced REST Clientを用いて動作確認を実施した。</p>
 </div>
 <div class="paragraph data-line-53">
-<p><strong>■ 4.警告への対応</strong></p>
+<p><strong>■ 4.実行可能jarの作成</strong></p>
 </div>
 <div class="paragraph data-line-55">
-<p>・フィールドインジェクトをコンストラクタインジェクトに置き換えた。</p>
+<p>Gradleプロジェクトで実行可能jarを作成する場合は、bootJarタスクを実行する。</p>
 </div>
 <div class="paragraph data-line-57">
+<p><strong>■ 5.警告への対応</strong></p>
+</div>
+<div class="paragraph data-line-59">
+<p>・フィールドインジェクトをコンストラクタインジェクトに置き換えた。</p>
+</div>
+<div class="paragraph data-line-61">
 <p>・SQLファイルを編集すると以下の警告が出るため対処した。<br>
 　- No data sources are configured to run this sql&#8230;&#8203;<br>
 　　⇒ローカルのデータソースとしてH2を設定した。<br></p>
 </div>
-<div class="paragraph data-line-61">
+<div class="paragraph data-line-65">
 <p>　- Sql dialect is not configured<br>
 　　⇒File→Settings→Languages＆Frameworks→SQL Dialectsで、Project SQL DialectsにH2を指定した。</p>
 </div>
-<div class="paragraph data-line-64">
+<div class="paragraph data-line-68">
 <p>・テストクラスで以下の警告が発生していたため対処した。<br>
 　- TodoRepositoryTest#testFindByID()で&#8217;Optional.get()' without 'isPresent()' check<br>
 　　⇒Optional#isPresent()メソッドによるチェックを追加した。<br></p>
 </div>
-<div class="paragraph data-line-68">
-<p>　- assertThat(foo).isEqualToComparingFieldByField(bar); が非推奨機能になっている。<br>
+<div class="paragraph data-line-72">
+<p>　- assertThat(foo).isEqualToComparingFieldByField(bar); が非推奨になっている。<br>
 　　⇒assertThat(foo).usingRecursiveComparison().isEqualTo(bar);に置き換える。<br></p>
 </div>
-<div class="paragraph data-line-71">
-<p>　- assertThat(foo).isEqualToIgnoringGivenFields(bar, baz).hasNoNullFieldsOrProperties(); が非推奨機能になっている。<br>
+<div class="paragraph data-line-75">
+<p>　- assertThat(foo).isEqualToIgnoringGivenFields(bar, baz).hasNoNullFieldsOrProperties(); が非推奨になっている。<br>
 　　⇒assertThat(foo).usingRecursiveComparison().ignoringFields(baz).isEqualTo(bar);<br>
 　　　assertThat(foo).hasNoNullFieldsOrProperties();に置き換える。</p>
 </div>
-<div class="paragraph data-line-75">
-<p>　- assertThat(foo).isEqualToComparingOnlyGivenFields(bar, baz).hasFieldOrPropertyWithValue(x, y); が非推奨機能になっている。<br>
+<div class="paragraph data-line-79">
+<p>　- assertThat(foo).isEqualToComparingOnlyGivenFields(bar, baz).hasFieldOrPropertyWithValue(x, y); が非機能になっている。<br>
 　　⇒assertThat(foo).usingRecursiveComparison().ignoringFields(baz以外の全てのメンバを列挙).isEqualTo(bar);<br>
     　　　assertThat(foo).hasFieldOrPropertyWithValue(x, y);に置き換える。<br>
     　　⇒<strong>より良い方法があるかどうか確認したい。</strong></p>
 </div>
-<div class="paragraph data-line-81">
-<p><strong>■ 4.その他の質問事項</strong></p>
+<div class="paragraph data-line-85">
+<p><strong>■ 6.その他の質問事項</strong></p>
 </div>
-<div class="paragraph data-line-83">
+<div class="paragraph data-line-87">
 <p>・TodoRepositoryTest#testUpdateById()が通らない。<br>
 　⇒todoの状態が更新されるため。通らないのが正しい？</p>
 </div>
-<div class="paragraph data-line-86">
+<div class="paragraph data-line-90">
 <p>・MockitoのwillDoNothing()の使い所、目的について理解したい。</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-06-04 21:54:16 +0900
+Last updated 2021-06-07 10:59:23 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
