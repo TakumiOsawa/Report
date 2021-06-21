@@ -449,24 +449,58 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="sect2 data-line-7">
 <h3 id="_1_aws_ecs上に構築するspringアプリケーション">1. AWS ECS上に構築するSpringアプリケーション</h3>
 <div class="paragraph data-line-9">
-<p><a href="https://news.mynavi.jp/itsearch/article/devsoft/4354">元記事</a></p>
+<p><strong>■ 1. VPCとサブネットの作成について</strong></p>
 </div>
 <div class="paragraph data-line-11">
-<p>元記事と異なる作業手順がある場合、以下に列挙する。</p>
+<p><a href="https://news.mynavi.jp/itsearch/article/devsoft/4354">元記事</a></p>
 </div>
 <div class="paragraph data-line-13">
-<p><strong>■ 1. VPCとサブネットの作成について</strong></p>
+<p>・以下のサブネットを作成し、10.2.0.0/16のVPCに紐づけた。<br>
+　ma-osawa-public1　：10.2.15.0/26　 apne1-az4<br>
+　ma-osawa-private1 ：10.2.15.64/26　apne1-az4<br>
+　ma-osawa-public2　：10.2.15.128/26 apne1-az1<br>
+　ma-osawa-private2 ：10.2.15.192/26 apne1-az1<br></p>
+</div>
+<div class="paragraph data-line-19">
+<p>・パブリックサブネットについては既存のルートテーブルma-personal-vpc-PublicRouteに紐づけた。</p>
+</div>
+<div class="paragraph data-line-21">
+<p><strong>■ 2. ALBの作成について</strong></p>
+</div>
+<div class="paragraph data-line-23">
+<p><a href="https://news.mynavi.jp/itsearch/article/devsoft/4359">元記事</a></p>
+</div>
+<div class="paragraph data-line-25">
+<p>・元記事に従い、ALB、セキュリティグループ、ターゲットグループを作成した。<br>
+　名前はパブリック、プライベートそれぞれで、</p>
+</div>
+<div class="paragraph data-line-28">
+<p>　ma-osawa-public<br>
+　ma-osawa-private</p>
+</div>
+<div class="paragraph data-line-31">
+<p>　とした。</p>
+</div>
+<div class="paragraph data-line-33">
+<p><strong>■ 3. Spring Bootでのアプリケーション作成</strong></p>
+</div>
+<div class="paragraph data-line-35">
+<p><a href="https://news.mynavi.jp/itsearch/article/devsoft/4363">元記事</a></p>
+</div>
+<div class="paragraph data-line-37">
+<p>バックエンド用アプリ及びBFF用のアプリはSpring Initializrを用いて生成した。<br>
+Gradleプロジェクトとして生成し、Dependenciesは、記事を参考に追加した。</p>
 </div>
 <hr>
 </div>
-<div class="sect2 data-line-21">
+<div class="sect2 data-line-46">
 <h3 id="_2_todo">2. TODO</h3>
 
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-06-07 16:08:13 +0900
+Last updated 2021-06-21 16:35:42 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
