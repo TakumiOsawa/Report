@@ -1,0 +1,179 @@
+:source-highlighter: highlightjs
+
+= 3. AWSで学ぶクラウドネイティブアプリケーションの基本
+
+---
+
+=== 1. AWS ECS上に構築するSpringアプリケーション
+
+*■ 1. VPCとサブネットの作成について*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4354[元記事]
+
+・以下のサブネットを作成し、10.2.0.0/16のVPCに紐づけた。 +
+　ma-osawa-public1　：10.2.15.0/26　 apne1-az4 +
+　ma-osawa-private1 ：10.2.15.64/26　apne1-az4 +
+　ma-osawa-public2　：10.2.15.128/26 apne1-az1 +
+　ma-osawa-private2 ：10.2.15.192/26 apne1-az1 +
+
+・パブリックサブネットについては既存のルートテーブルma-personal-vpc-PublicRouteに紐づけた。
+
+・*パブリックサブネット作成後、アクションの「自動割り当てIP設定の変更」から、「パブリック IPv4 アドレスの自動割り当てを有効にする」にチェックを入れる。* +
+　⇒これを忘れると、Session Managerでパブリックサブネット上のEC2インスタンスをターゲットインスタンスに選択できない。
+
+・現在、プライベートサブネット用の既存のルートテーブルには、有効なNATゲートウェイが紐付いていないため、プライベートサブネット用のルートテーブルおよびNATゲートウェイは記事通りに作成した。 +
+　⇒NATゲートウェイ作成時に必要なElastic IPが上限いっぱいまで払い出されていたため、サポートからクォータ上限引き上げを行った。上限値を5から10に引き上げた。 +
+　⇒サポートの利用権限が存在しなかったため、自身のIAMユーザにAWSSupportAccessポリシーをアタッチした。
+　⇒プライベートサブネット用のルートテーブルの名前はma-osawa-public、NATゲートウェイの名前はma-osawa-private-to-publicとした。
+
+*■ 2. ALBの作成について*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4359[元記事]
+
+・元記事に従い、ALB、セキュリティグループ、ターゲットグループを作成した。 +
+　名前はパブリック、プライベートそれぞれで、
+　
+　ma-osawa-public +
+　ma-osawa-private
+　
+　とした。
+
+・プライべート側のターゲットグループのヘルスチェックのパスは/backend/api/v1/usersとした。 +
+　⇒第3回を実施する前に/backend/index.htmlと設定してそのままにしてしまい、少し嵌った。
+
+*■ 3. Spring Bootでのアプリケーション作成*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4363[元記事]
+
+・バックエンド用アプリ及びBFF用のアプリはSpring Initializrを用いて生成した。Gradleプロジェクトとして生成し、Dependenciesは記事を参考に追加した。 +
+
+・GitHubに登録する際、PrivateリポジトリだとDocker build時にシークレット情報が必要となり、CodeCommit等他のソリューションと組み合わせる必要が出てくるので、今回はPublicリポジトリに登録した。
+
+・手順4でのdocker build時になぜかJava8プロジェクトとして認識されずエラーになってしまうため、*sourceCompatibilityとtargetCompatibilityには変数を指定* し、後でgradle buildコマンド実行時にパラメータとしてJava8を示す値を指定する。 +
+　⇒成島さんの記事を確認し、docker rmiで過去のイメージを消すことでも解消できることを知ったが、実際に試せてはいない。
+
+・GitHubリポジトリを確認して、htmlファイルやcssファイルも追加する。また、BFF側のapplivcation.ymlへのcontext-pathの記述も忘れずに行う。
+
+*■ 4. Dockerコンテナの作成とPush*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4390[元記事]
+
+まず、Dockerイメージを作成するためのEC2インスタンスを作成する。
+
+EC2インスタンスにSession Managerでログインするため、まずは以下の記事を参考にIAMロールを作成し、続いてEC2インスタンスを作成する。
+
+https://qiita.com/comefigo/items/b705325d082018ab2348[Session Manager用のIAMロールの作成]
+
+ma-osawa-ssm-roleおよび、ma-osawa-docker-image-serverを作成した。 +
+ma-osawa-docker-image-serverはパブリックサブネットに関連付ける。
+
+DockerfileはGradleを利用するために、以下のように記述した。
+[source,shell]
+----
+FROM centos:centos7
+MAINTAINER Takumi.Osawa
+
+RUN yum install -y \
+       java-1.8.0-openjdk \
+       java-1.8.0-openjdk-devel \
+       wget tar iproute git
+
+#1
+RUN wget https://services.gradle.org/distributions/gradle-7.1-bin.zip
+RUN yum install -y unzip
+RUN unzip -d /opt/gradle ./gradle-7.1-bin.zip
+ENV JAVA_HOME /etc/alternatives/jre
+ENV GRADLE_HOME /opt/gradle/gradle-7.1
+ENV PATH ${GRADLE_HOME}/bin:${PATH}
+RUN git clone https://github.com/TakumiOsawa/backend.git /var/local/sample-aws-ecs/backend
+#2
+WORKDIR /var/local/sample-aws-ecs/backend
+#3
+RUN gradle bootJar -PjavaVersion=1.8 -Dorg.gradle.java.home=$JAVA_HOME
+
+RUN cp /etc/localtime /etc/localtime.org
+RUN ln -sf  /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
+EXPOSE 8080
+
+#4
+CMD java -jar -Dspring.profiles.active=production /var/local/sample-aws-ecs/backend/build/libs/backend-0.0.1-SNAPSHOT.jar
+
+----
+
+---
+
+*#1* +
+Gradleのzipファイルをダウンロードする。ダウンロードしたzipファイルはunzipコマンドで解凍する。
+
+*#2* +
+docker buildではcdコマンドでディレクトリを移動できないため、WORKDIR命令でワーキングディレクトリを変更して対応する。
+
+*#3* +
+gradle bootJarコマンドで実行可能jarを生成する。docker build時にJava8プロジェクトとして認識されない問題を解決するため、パラメータでJavaバージョンやgradle.java.homeを指定する。
+
+*#4* +
+Gradleプロジェクトでは、実行可能jarはbuild/libs内に生成される。
+
+---
+
+実際のdocker buildコマンドは以下を実行した。 +
+
+sudo docker build ./ -t nototsdaawtaa/backend:latest +
+sudo docker build ./ -t nototsdaawtaa/backend-for-frontend:latest +
+
+・イメージの作成を繰り返すうちに、メモリ不足に陥った。duコマンドでストレージ使用量を確認したところ、/dev/xvda1が100%になっていた。 +
+　⇒du -x -h / | sort -r -h | head -40を実行し、容量が大きいファイルを確認したところ、docker関連のファイルが肥大化していた。 +
+　⇒*docker system prune --allでクリーンアップしたところ、メモリ不足が解決した。*
+
+*■ 5. ECSクラスタの作成*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4405[元記事]
+
+ma-osawa-publicとma-osawa-privateを作成した。
+
+ECSインスタンスのセキュリティグループは、EC2⇒セキュリティグループでセキュリティグループ名を確認して判別すればよい。
+
+*■ 6. ECSタスクの定義*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4408[元記事]
+
+ma-osawa-publicとma-osawa-privateを作成した。 +
+メモリ類の設定は2048MBに設定した。
+
+*■ 7. ECSサービスの実行*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4416[元記事]
+
+ma-osawa-publicとma-osawa-privateを作成した。 +
+
+・Session Managerで接続できるようにするために、ECSサービスにはSession Managerに接続するためのポリシーをアタッチしたIAMロールを指定する。 +
+　⇒コンテナインスタンスへの接続は、Session ManagerでECSのEC2インスタンスに接続し、そこから以下のコマンドで接続する。
+
+docker ps +
+docker exec -i -t <コンテナインスタンスのID> bash
+
+・一度、不具合のあるコンテナイメージをpullし、起動させたコンテナがすぐ停止、オートスケーリングによりすぐに起動し直すことを繰り返す状態になってしまった。そのまま時間が経過したところ、Docker HubのDownload Rate Limitに到達し、Docker Hubからイメージをpullできなくなった。 +
+　⇒*一度ECSサービスを削除し、6時間時間を空けることで解消した。*
+
+実行しているサービスには以下からアクセスできる。
+
+http://ma-osawa-public-1741593603.ap-northeast-1.elb.amazonaws.com/backend-for-frontend/index.html
+
+---
+
+=== 2. Amazon RDSにアクセスするSpringアプリケーション
+
+*■ 1. Amazon RDSとユーザ/認証情報の作成*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4422[元記事]
+
+ma-osawa-rdsを作成した。RDSにアクセスするユーザとしてma-osawa-rdsを作成した。
+
+*■2. テーブル構築と設定クラスの実装*
+
+https://news.mynavi.jp/itsearch/article/devsoft/4426[元記事]
+
+・PostgreSQLのマスターユーザは「postgre」であり、パスワードはAWSコンソールでRDSインスタンス作成時に指定したマスターパスワードである。
+
+DataSource must not be null rdsになってしまう
