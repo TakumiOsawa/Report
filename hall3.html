@@ -670,13 +670,32 @@ docker exec -i -t &lt;コンテナインスタンスのID&gt; bash</p>
 <p>・PostgreSQLのマスターユーザは「postgre」であり、パスワードはAWSコンソールでRDSインスタンス作成時に指定したマスターパスワードである。</p>
 </div>
 <div class="paragraph data-line-179">
-<p>DataSource must not be null rdsになってしまう</p>
+<p>・psqlの-dオプションや、Spring BootのDataSourceのエンドポイントURL内で指定するデータベース名は、AWSマネジメントコンソールのRDSの詳細の設定タブから確認できる。</p>
+</div>
+<div class="paragraph data-line-181">
+<p>・今回はSpring Cloud AWSを利用しなかったため、RDSConfig.javaも利用していない。Spring Cloud AWSを利用しない場合、application.ymlに以下のように記載する。</p>
+</div>
+<div class="listingblock data-line-184">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="yml" class="language-yml hljs">spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://ma-osawa-rds.cohnmw0q2ggp.ap-northeast-1.rds.amazonaws.com:5432/ma-osawa-database
+    username: postgres
+    password: &lt;パスワード&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-193">
+<p><strong>■3. アプリケーションの処理実装</strong></p>
+</div>
+<div class="paragraph data-line-195">
+<p><a href="https://news.mynavi.jp/itsearch/article/devsoft/4449">元記事</a></p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-02 17:24:35 +0900
+Last updated 2021-08-06 23:32:47 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
