@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.10">
-<title>作業記録</title>
+<title>1. AWS上への検証用サービス構築</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -438,44 +438,115 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article data-line-1">
 <div id="header">
-<h1>作業記録</h1>
+<h1>1. AWS上への検証用サービス構築</h1>
 </div>
 <div id="content">
-<div class="sect2 data-line-3">
-<h3 id="_初心者の館">初心者の館</h3>
+<div id="preamble">
+<div class="sectionbody">
 <div class="paragraph data-line-5">
-<p><a href="https://takumiosawa.github.io/Report/hall1-1.html">1-1.　TERASOLUNAチュートリアルその1</a></p>
+<p><strong>■ 目標</strong><br>
+microservices.ioを公開している、設計コンサルタントのChris Richardson氏が執筆した書籍「マイクロサービスパターン」を参考に、検証用のマイクロサービスを構築する。<br>
+初期構築にあたり、各サービスの実装パターンは実装工数が少ないものを選択している。</p>
 </div>
-<div class="paragraph data-line-7">
-<p><a href="https://takumiosawa.github.io/Report/hall2.html">2.　Spring Bootチュートリアル</a></p>
-</div>
-<div class="paragraph data-line-9">
-<p><a href="https://takumiosawa.github.io/Report/hall3.html">3.　AWSで作るクラウドネイティブアプリケーションの基本</a></p>
+<hr>
 </div>
 </div>
 <div class="sect2 data-line-11">
-<h3 id="_自身のテーマ">自身のテーマ</h3>
+<h3 id="_1_各サービスの定義">1. 各サービスの定義</h3>
 <div class="paragraph data-line-13">
-<p><a href="https://takumiosawa.github.io/Report/theme1.html">1.　AWS上への検証用サービス構築</a></p>
+<p>架空のフードデリバリーサービス会社FTGO(Food to Go. Inc)の古いWebアプリケーションをモダナイズするという設定である。</p>
 </div>
 <div class="paragraph data-line-15">
-<p>TODO<br>
-<a href="https://takumiosawa.github.io/Report/theme2.html">2.　メトリクス収集の実現</a></p>
+<p>上記設定におけるWebアプリケーションを構成するマイクロサービスおよびそのAPIは以下の通りである。</p>
 </div>
-<div class="paragraph data-line-18">
-<p>TODO<br>
-<a href="https://takumiosawa.github.io/Report/theme3.html">3.　負荷試験の実施</a></p>
+<div class="paragraph data-line-17">
+<p>■顧客サービス(CustomerService)<br>
+　verifyConsumerDetails()<br>
+　⇒顧客が発注できることを確認し、顧客の支払い情報を入手する。</p>
 </div>
 <div class="paragraph data-line-21">
-<p>TODO<br>
-<a href="https://takumiosawa.github.io/Report/theme4.html">4.　API Composition vs CQRS</a></p>
+<p>■オーダーサービス(OrderService)<br>
+　createOrder()<br>
+　⇒顧客の注文を作成する。</p>
 </div>
+<div class="paragraph data-line-25">
+<p>■レストランサービス(RestaurantService)<br>
+　findAvailableRestaurants()<br>
+　⇒注文受付可能なレストラン(料理の製造元)を探す。<br>
+　　⇒料理がメニューにあること、配達先の住所や配達時間がサポート範囲内であることを確認する。</p>
+</div>
+<div class="paragraph data-line-30">
+<p>　verifyOrderDetails()<br>
+　⇒料理の価格情報を入手し、注文総額が受付可能下限よりも大きいことを確認する。</p>
+</div>
+<div class="paragraph data-line-33">
+<p>■キッチンサービス(KitchenService)<br>
+　createTicket()<br>
+　⇒チケットを作成する。</p>
+</div>
+<div class="paragraph data-line-37">
+<p>　acceptOrder()<br>
+　⇒注文を承諾する。</p>
+</div>
+<div class="paragraph data-line-40">
+<p>　noteOrderReadyForPickup()<br>
+　⇒注文を配達可能な状態にする。</p>
+</div>
+<div class="paragraph data-line-43">
+<p>■配達サービス(DeliveryService)<br>
+　scheduleDelivery()<br>
+　⇒配達計画を作成する。</p>
+</div>
+<div class="paragraph data-line-47">
+<p>　noteUpdateLocation()<br>
+　⇒配達人の場所を更新する。</p>
+</div>
+<div class="paragraph data-line-50">
+<p>　noteDeliveryPickedUp()<br>
+　⇒配達開始状態に更新する。</p>
+</div>
+<div class="paragraph data-line-53">
+<p>　noteDeliveryDelivered()<br>
+　⇒配達完了状態に更新する。</p>
+</div>
+<div class="paragraph data-line-56">
+<p>■会計サービス(AccountService)
+　authorizeCard()<br>
+　⇒クレジットカードを承認し、会計する。</p>
+</div>
+<hr>
+</div>
+<div class="sect2 data-line-61">
+<h3 id="_2_orderserviceの実装">2. OrderServiceの実装</h3>
+<div class="paragraph data-line-65">
+<p>Sagaの実装には <a href="http://terasolunaorg.github.io/guideline/5.7.0.RELEASE/ja/Tutorial/TutorialTodo.html">Eventuate Tram Saga Framework</a>を使用する。</p>
+</div>
+<div class="paragraph data-line-67">
+<p><strong>■ 注意点</strong></p>
+</div>
+<div class="paragraph data-line-69">
+<p>・以下のクラスは、最新のEventuate Tram Saga Framework(0.18.0.RELEASE)でクラス名が変わっているので注意する。<br>
+　- SagaCommandHandlersBuilder<br>
+　　　⇒CommandHandlersBuilder<br>
+　- SagaCommandDispatcher<br>
+　　　⇒CommandDispatcher<br>
+　- ResultWithAggregateEvents<br>
+　　　⇒ResultWithEvents?</p>
+</div>
+<hr>
+</div>
+<div class="sect2 data-line-78">
+<h3 id="_3_kitchenserviceの実装">3. KitchenServiceの実装</h3>
+
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-16 16:54:21 +0900
+Last updated 2021-08-16 16:52:51 +0900
 </div>
 </div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+<script>hljs.initHighlighting()</script>
 </body>
 </html>
