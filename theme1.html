@@ -518,6 +518,9 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
 </div>
 <div class="sect2 data-line-61">
 <h3 id="_2_orderserviceの実装">2. OrderServiceの実装</h3>
+<div class="paragraph data-line-63">
+<p><a href="https://github.com/TakumiOsawa/OrderService">リポジトリ</a></p>
+</div>
 <div class="paragraph data-line-65">
 <p>Sagaの実装には <a href="http://terasolunaorg.github.io/guideline/5.7.0.RELEASE/ja/Tutorial/TutorialTodo.html">Eventuate Tram Saga Framework</a>を使用する。</p>
 </div>
@@ -531,18 +534,62 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
 　- SagaCommandDispatcher<br>
 　　　⇒CommandDispatcher<br>
 　- ResultWithAggregateEvents<br>
-　　　⇒ResultWithEvents?</p>
+　　　⇒ResultWithEvents　型パラメータの定義も異なる。</p>
+</div>
+<div class="paragraph data-line-77">
+<p>・サンプルコードを参考にすると、全てのサービスを1つのリポジトリで管理する必要が出てくるため、実装を大幅に変更して各サービス毎にリポジトリを分けるようにした。</p>
 </div>
 <hr>
 </div>
-<div class="sect2 data-line-78">
-<h3 id="_3_kitchenserviceの実装">3. KitchenServiceの実装</h3>
+<div class="sect2 data-line-80">
+<h3 id="_3_orderserviceのデプロイ">3. OrderServiceのデプロイ</h3>
+<div class="paragraph data-line-82">
+<p>初心者の館の取組みによって作成したサービスを有効活用する。</p>
+</div>
+<div class="paragraph data-line-84">
+<p>Dockerfileを作成し、GitHubにPushする。<br>
+⇒Docker Imageビルド用のEC2インスタンスにアクセスし、Docker Imageを作成してDocker HubにPushする。<br>
+⇒Amazon RDSでPostgreSQLのDBを構築し、必要なテーブルを作成する。<br>
+⇒Parameter Storeに接続に必要な環境変数用のパラメータを登録する。<br>
+⇒ECSタスクを定義する。<br>
+⇒ECSクラスタを作成する。<br>
+⇒ターゲットグループを作成する。<br>
+⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。<br>
+⇒ECSサービスを作成する。</p>
+</div>
+<div class="paragraph data-line-94">
+<p>・DBへの接続情報は下記の記事を参考にParameter Storeに格納し、コンテナのデプロイ時に環境変数として展開する。</p>
+</div>
+<div class="paragraph data-line-96">
+<p><a href="https://dev.classmethod.jp/articles/ecs-secrets/" class="bare">https://dev.classmethod.jp/articles/ecs-secrets/</a></p>
+</div>
+<div class="paragraph data-line-98">
+<p>・アプリケーションを実行したところ、以下のエラーが出力された。</p>
+</div>
+<div class="listingblock data-line-101">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="txt" class="language-txt hljs">***************************
+APPLICATION FAILED TO START
+***************************
 
+Description:
+
+Parameter 0 of method commandProducer in io.eventuate.tram.spring.commands.producer.TramCommandProducerConfiguration required a bean of type 'io.eventuate.tram.messaging.producer.MessageProducer' that could notbe found.
+
+The injection point has the following annotations:
+        - @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'io.eventuate.tram.messaging.producer.MessageProducer' in your configuration.</code></pre>
+</div>
+</div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-16 16:52:51 +0900
+Last updated 2021-08-26 04:20:46 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
