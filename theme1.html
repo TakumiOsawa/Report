@@ -554,42 +554,46 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
 ⇒ECSタスクを定義する。<br>
 ⇒ECSクラスタを作成する。<br>
 ⇒ターゲットグループを作成する。<br>
-⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。<br>
-⇒ECSサービスを作成する。</p>
+⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。<br></p>
 </div>
-<div class="paragraph data-line-94">
+<div class="paragraph data-line-93">
 <p>・DBへの接続情報は下記の記事を参考にParameter Storeに格納し、コンテナのデプロイ時に環境変数として展開する。</p>
 </div>
-<div class="paragraph data-line-96">
+<div class="paragraph data-line-95">
 <p><a href="https://dev.classmethod.jp/articles/ecs-secrets/" class="bare">https://dev.classmethod.jp/articles/ecs-secrets/</a></p>
 </div>
-<div class="paragraph data-line-98">
-<p>・アプリケーションを実行したところ、以下のエラーが出力された。</p>
+<div class="paragraph data-line-97">
+<p>・メッセージブローカーはKafkaを選択した。<br>
+　⇒当初はKafkaと比較して軽量なRabbitMQの利用を検討していたが、Eventuate Tram Frameworkにおいて、io.eventuate.tram.core:eventuate-tram-spring-consumer-rabbitmqは提供が終了されており、かつ後継のio.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、アプリ起動時のZooKeeperの設定が上手くいかず解決に時間がかかる可能性が高いと判断したため、今回は使用を断念した。</p>
 </div>
-<div class="listingblock data-line-101">
+<div class="paragraph data-line-100">
+<p>Kafkaの使用にあたって、application.ymlに以下を追記する。</p>
+</div>
+<div class="listingblock data-line-103">
 <div class="content">
-<pre class="highlightjs highlight"><code data-lang="txt" class="language-txt hljs">***************************
-APPLICATION FAILED TO START
-***************************
-
-Description:
-
-Parameter 0 of method commandProducer in io.eventuate.tram.spring.commands.producer.TramCommandProducerConfiguration required a bean of type 'io.eventuate.tram.messaging.producer.MessageProducer' that could notbe found.
-
-The injection point has the following annotations:
-        - @org.springframework.beans.factory.annotation.Autowired(required=true)
-
-
-Action:
-
-Consider defining a bean of type 'io.eventuate.tram.messaging.producer.MessageProducer' in your configuration.</code></pre>
+<pre class="highlightjs highlight"><code data-lang="yml" class="language-yml hljs">eventuatelocal:
+  kafka:
+    bootstrap:
+      servers: ${DOCKER_HOST_IP:localhost}:9092</code></pre>
 </div>
+</div>
+<div class="paragraph data-line-110">
+<p>また、リファレンス通りにConfigurationでEventuateTramKafkaMessageConsumerConfiguration.classをimportするだけでは不十分であり、以下のBean定義が必要。(DuplicateMessageDetectorの定義は複数あるが、今回は最も単純なものを選択した)</p>
+</div>
+<div class="listingblock data-line-113">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="java" class="language-java hljs">@Bean
+public DuplicateMessageDetector duplicateMessageDetector() { return new NoopDuplicateMessageDetector(); }</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-118">
+<p>次に、アプリケーション側でKafkaを利用できるように、Amazon MSKクラスタを作成する。</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-26 04:20:46 +0900
+Last updated 2021-08-28 18:08:13 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
