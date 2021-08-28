@@ -564,12 +564,13 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
 </div>
 <div class="paragraph data-line-97">
 <p>・メッセージブローカーはKafkaを選択した。<br>
-　⇒当初はKafkaと比較して軽量なRabbitMQの利用を検討していたが、Eventuate Tram Frameworkにおいて、io.eventuate.tram.core:eventuate-tram-spring-consumer-rabbitmqは提供が終了されており、かつ後継のio.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、アプリ起動時のZooKeeperの設定が上手くいかず解決に時間がかかる可能性が高いと判断したため、今回は使用を断念した。</p>
+　⇒当初はKafkaと比較して軽量なRabbitMQの利用を検討していたが、Eventuate Tram Frameworkにおいて、io.eventuate.tram.core:eventuate-tram-spring-consumer-rabbitmqは提供が終了されており、かつ後継とみられるio.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、アプリ起動時のZooKeeperの設定が上手くいかず解決に時間がかかる可能性が高いと判断したため、今回は使用を断念した。<br>
+(io.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、リファレンスに記載がないため使用可能なものなのかも不明)</p>
 </div>
-<div class="paragraph data-line-100">
+<div class="paragraph data-line-101">
 <p>Kafkaの使用にあたって、application.ymlに以下を追記する。</p>
 </div>
-<div class="listingblock data-line-103">
+<div class="listingblock data-line-104">
 <div class="content">
 <pre class="highlightjs highlight"><code data-lang="yml" class="language-yml hljs">eventuatelocal:
   kafka:
@@ -577,23 +578,23 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
       servers: ${DOCKER_HOST_IP:localhost}:9092</code></pre>
 </div>
 </div>
-<div class="paragraph data-line-110">
+<div class="paragraph data-line-111">
 <p>また、リファレンス通りにConfigurationでEventuateTramKafkaMessageConsumerConfiguration.classをimportするだけでは不十分であり、以下のBean定義が必要。(DuplicateMessageDetectorの定義は複数あるが、今回は最も単純なものを選択した)</p>
 </div>
-<div class="listingblock data-line-113">
+<div class="listingblock data-line-114">
 <div class="content">
 <pre class="highlightjs highlight"><code data-lang="java" class="language-java hljs">@Bean
 public DuplicateMessageDetector duplicateMessageDetector() { return new NoopDuplicateMessageDetector(); }</code></pre>
 </div>
 </div>
-<div class="paragraph data-line-118">
+<div class="paragraph data-line-119">
 <p>次に、アプリケーション側でKafkaを利用できるように、Amazon MSKクラスタを作成する。</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-28 18:08:13 +0900
+Last updated 2021-08-28 18:17:28 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
