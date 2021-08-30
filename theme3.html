@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.10">
-<title>1. AWS上への検証用サービス構築</title>
+<title>3. 負荷試験の実施</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -438,198 +438,36 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article data-line-1">
 <div id="header">
-<h1>1. AWS上への検証用サービス構築</h1>
+<h1>3. 負荷試験の実施</h1>
 </div>
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph data-line-5">
 <p><strong>■ 目標</strong><br>
-microservices.ioを公開している、設計コンサルタントのChris Richardson氏が執筆した書籍「マイクロサービスパターン」を参考に、検証用のマイクロサービスを構築する。<br>
-初期構築にあたり、各サービスの実装パターンは実装工数が少ないものを選択している。</p>
+構築した検証環境を用いて負荷試験を実施する。<br></p>
 </div>
 <hr>
 </div>
 </div>
-<div class="sect2 data-line-11">
-<h3 id="_1_各サービスの定義">1. 各サービスの定義</h3>
-<div class="paragraph data-line-13">
-<p>架空のフードデリバリーサービス会社FTGO(Food to Go. Inc)の古いWebアプリケーションをモダナイズするという設定である。</p>
+<div class="sect2 data-line-10">
+<h3 id="_1_負荷分散テストソリューションの利用">1. 負荷分散テストソリューションの利用</h3>
+<div class="paragraph data-line-12">
+<p>以下のページのAWSソリューションを利用する。<br>
+<a href="https://aws.amazon.com/jp/solutions/implementations/distributed-load-testing-on-aws/">AWSでの負荷分散テスト</a></p>
 </div>
 <div class="paragraph data-line-15">
-<p>上記設定におけるWebアプリケーションを構成するマイクロサービスおよびそのAPIは以下の通りである。</p>
+<p>以下のページを参考に環境の立ち上げを実施する。 <br>
+<a href="https://dev.classmethod.jp/articles/distributed-load-testing-on-aws/">AWSの負荷テストソリューションを試してみた</a></p>
 </div>
-<div class="paragraph data-line-17">
-<p>■顧客サービス(CustomerService)<br>
-　verifyConsumerDetails()<br>
-　⇒顧客が発注できることを確認し、顧客の支払い情報を入手する。</p>
-</div>
-<div class="paragraph data-line-21">
-<p>■オーダーサービス(OrderService)<br>
-　createOrder()<br>
-　⇒顧客の注文を作成する。</p>
-</div>
-<div class="paragraph data-line-25">
-<p>■レストランサービス(RestaurantService)<br>
-　findAvailableRestaurants()<br>
-　⇒注文受付可能なレストラン(料理の製造元)を探す。<br>
-　　⇒料理がメニューにあること、配達先の住所や配達時間がサポート範囲内であることを確認する。</p>
-</div>
-<div class="paragraph data-line-30">
-<p>　verifyOrderDetails()<br>
-　⇒料理の価格情報を入手し、注文総額が受付可能下限よりも大きいことを確認する。</p>
-</div>
-<div class="paragraph data-line-33">
-<p>■キッチンサービス(KitchenService)<br>
-　createTicket()<br>
-　⇒チケットを作成する。</p>
-</div>
-<div class="paragraph data-line-37">
-<p>　acceptOrder()<br>
-　⇒注文を承諾する。</p>
-</div>
-<div class="paragraph data-line-40">
-<p>　noteOrderReadyForPickup()<br>
-　⇒注文を配達可能な状態にする。</p>
-</div>
-<div class="paragraph data-line-43">
-<p>■配達サービス(DeliveryService)<br>
-　scheduleDelivery()<br>
-　⇒配達計画を作成する。</p>
-</div>
-<div class="paragraph data-line-47">
-<p>　noteUpdateLocation()<br>
-　⇒配達人の場所を更新する。</p>
-</div>
-<div class="paragraph data-line-50">
-<p>　noteDeliveryPickedUp()<br>
-　⇒配達開始状態に更新する。</p>
-</div>
-<div class="paragraph data-line-53">
-<p>　noteDeliveryDelivered()<br>
-　⇒配達完了状態に更新する。</p>
-</div>
-<div class="paragraph data-line-56">
-<p>■会計サービス(AccountService)
-　authorizeCard()<br>
-　⇒クレジットカードを承認し、会計する。</p>
-</div>
-<hr>
-</div>
-<div class="sect2 data-line-61">
-<h3 id="_2_orderserviceの実装">2. OrderServiceの実装</h3>
-<div class="paragraph data-line-63">
-<p><a href="https://github.com/TakumiOsawa/OrderService">リポジトリ</a></p>
-</div>
-<div class="paragraph data-line-65">
-<p>Sagaの実装には <a href="http://terasolunaorg.github.io/guideline/5.7.0.RELEASE/ja/Tutorial/TutorialTodo.html">Eventuate Tram Saga Framework</a>を使用する。</p>
-</div>
-<div class="paragraph data-line-67">
-<p><strong>■ 注意点</strong></p>
-</div>
-<div class="paragraph data-line-69">
-<p>・以下のクラスは、最新のEventuate Tram Saga Framework(0.18.0.RELEASE)でクラス名が変わっているので注意する。<br>
-　- SagaCommandHandlersBuilder<br>
-　　　⇒CommandHandlersBuilder<br>
-　- SagaCommandDispatcher<br>
-　　　⇒CommandDispatcher<br>
-　- ResultWithAggregateEvents<br>
-　　　⇒ResultWithEvents　型パラメータの定義も異なる。</p>
-</div>
-<div class="paragraph data-line-77">
-<p>・サンプルコードを参考にすると、全てのサービスを1つのリポジトリで管理する必要が出てくるため、実装を大幅に変更して各サービス毎にリポジトリを分けるようにした。</p>
-</div>
-<hr>
-</div>
-<div class="sect2 data-line-80">
-<h3 id="_3_orderserviceのデプロイ">3. OrderServiceのデプロイ</h3>
-<div class="paragraph data-line-82">
-<p>初心者の館の取組みによって作成したサービスを有効活用する。</p>
-</div>
-<div class="paragraph data-line-84">
-<p>Dockerfileを作成し、GitHubにPushする。<br>
-⇒Docker Imageビルド用のEC2インスタンスにアクセスし、Docker Imageを作成してDocker HubにPushする。<br>
-⇒Amazon RDSでPostgreSQLのDBを構築し、必要なテーブルを作成する。<br>
-⇒Parameter Storeに接続に必要な環境変数用のパラメータを登録する。<br>
-⇒ECSタスクを定義する。<br>
-⇒ECSクラスタを作成する。<br>
-⇒ターゲットグループを作成する。<br>
-⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。<br></p>
-</div>
-<div class="paragraph data-line-93">
-<p>・DBへの接続情報は下記の記事を参考にParameter Storeに格納し、コンテナのデプロイ時に環境変数として展開する。</p>
-</div>
-<div class="paragraph data-line-95">
-<p><a href="https://dev.classmethod.jp/articles/ecs-secrets/" class="bare">https://dev.classmethod.jp/articles/ecs-secrets/</a></p>
-</div>
-<div class="paragraph data-line-97">
-<p>・メッセージブローカーはKafkaを選択した。<br>
-　⇒当初はKafkaと比較して軽量なRabbitMQの利用を検討していたが、Eventuate Tram Frameworkにおいて、io.eventuate.tram.core:eventuate-tram-spring-consumer-rabbitmqは提供が終了されており、かつ後継とみられるio.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、アプリ起動時のZooKeeperの設定が上手くいかず解決に時間がかかる可能性が高いと判断したため、今回は使用を断念した。<br>
-(io.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、リファレンスに記載がないため使用可能なものなのかも不明)</p>
-</div>
-<div class="paragraph data-line-101">
-<p>Kafkaの使用にあたって、application.ymlに以下を追記する。</p>
-</div>
-<div class="listingblock data-line-104">
-<div class="content">
-<pre class="highlightjs highlight"><code data-lang="yml" class="language-yml hljs">eventuatelocal:
-  kafka:
-    bootstrap:
-      servers: ${DOCKER_HOST_IP:localhost}:9092</code></pre>
-</div>
-</div>
-<div class="paragraph data-line-111">
-<p>また、リファレンス通りにConfigurationでEventuateTramKafkaMessageConsumerConfiguration.classをimportするだけでは不十分であり、以下のBean定義が必要。(DuplicateMessageDetectorの定義は複数あるが、今回は最も単純なものを選択した)</p>
-</div>
-<div class="listingblock data-line-114">
-<div class="content">
-<pre class="highlightjs highlight"><code data-lang="java" class="language-java hljs">@Bean
-public DuplicateMessageDetector duplicateMessageDetector() { return new NoopDuplicateMessageDetector(); }</code></pre>
-</div>
-</div>
-<div class="paragraph data-line-119">
-<p>次に、アプリケーション側でKafkaを利用できるように、Amazon MSKクラスタを作成する。<br>
-Web上に特に記事がなく、公式リファレンスではAWS CLIでのチュートリアルしか存在しないため、以下に手順を記載する。<br></p>
-</div>
-<div class="olist arabic data-line-122">
-<ol class="arabic">
-<li class="data-line-122">
-<p>サービス一覧からAmazon MSKを選択する。<br></p>
-</li>
-<li class="data-line-123">
-<p>以下の項目を入力し、「クラスターの作成」ボタンを押下する。<br>
-　クラスターの作成方法：カスタム作成<br>
-　クラスター名：ma-ftgo<br>
-　Apache kafkaバージョン：2.6.2(デフォルト)<br>
-　クラスター設定：MSKのデフォルト設定<br>
-　VPC：ma-personal-vpc<br>
-　ゾーン数：2<br>
-　最初のゾーン：ap-northeast-1a<br>
-　サブネット：ma-osawa-public1<br>
-　2番目のゾーン：ap-northeast-1c<br>
-　サブネット：ma-osawa-public2<br>
-　セキュリティグループ：デフォルト設定<br>
-　ブローカータイプ：kafka.t3.small<br>
-　ゾーン当たりのブローカー数：1(デフォルト)<br>
-　ブローカーあたりのEBSストレージボリューム：100GiB<br>
-　アクセスコントロール方法：なし<br>
-　クラスター内で暗号化を有効にする：有効(デフォルト)<br>
-　クライアントとブローカー間の暗号化：プレーンテキスト<br>
-　保管時のデータの暗号化：AWS管理CMKの利用(デフォルト)<br>
-　このクラスターのAmazon CloudWatchメトリクス：基本モニタリング(デフォルト)<br>
-　Prometheus でオープンモニタリングを有効にする：無効(デフォルト)<br>
-　ブローカーログの配信：すべて無効<br></p>
-</li>
-<li class="data-line-145">
-<p>15分程度待つ。</p>
-</li>
-</ol>
+<div class="paragraph data-line-18">
+<p>1Gbpsを超えない限り、負荷試験にかかる申請は不要。</p>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-30 17:45:56 +0900
+Last updated 2021-08-30 17:46:07 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
