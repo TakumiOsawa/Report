@@ -539,38 +539,46 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
 <div class="paragraph data-line-77">
 <p>・サンプルコードを参考にすると、全てのサービスを1つのリポジトリで管理する必要が出てくるため、実装を大幅に変更して各サービス毎にリポジトリを分けるようにした。</p>
 </div>
+<div class="paragraph data-line-79">
+<p>・ヘルスチェック用に @ResponseStatus(HttpStatus.OK) を適用したAPIを切っておくこと。</p>
+</div>
+<div class="paragraph data-line-81">
+<p>・なぜか@GeneratedValue(strategy=GenerationType.AUTO)が動かない。</p>
+</div>
 <hr>
 </div>
-<div class="sect2 data-line-80">
+<div class="sect2 data-line-84">
 <h3 id="_3_orderserviceのデプロイ">3. OrderServiceのデプロイ</h3>
-<div class="paragraph data-line-82">
+<div class="paragraph data-line-86">
 <p>初心者の館の取組みによって作成したサービスを有効活用する。</p>
 </div>
-<div class="paragraph data-line-84">
+<div class="paragraph data-line-88">
 <p>Dockerfileを作成し、GitHubにPushする。<br>
 ⇒Docker Imageビルド用のEC2インスタンスにアクセスし、Docker Imageを作成してDocker HubにPushする。<br>
-⇒Amazon RDSでPostgreSQLのDBを構築し、必要なテーブルを作成する。<br>
-⇒Parameter Storeに接続に必要な環境変数用のパラメータを登録する。<br>
-⇒ECSタスクを定義する。<br>
+⇒Amazon RDSでMySQLのDBを構築し、必要なテーブルを作成する。<br>
+⇒MSKでKafkaを構築し、必要なTopicを作成する。<br>
+⇒Parameter StoreにRDSおよびMSKへの接続に必要な環境変数用のパラメータを登録する。<br>
+⇒ECSタスクを定義する。タスク実行ロールには、AmazonRDSFullAccess、AmazonMSKFullAccessポリシーがアタッチされたIAMロールを指定する。<br>
 ⇒ECSクラスタを作成する。<br>
 ⇒ターゲットグループを作成する。<br>
-⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。<br></p>
+⇒既存のALBのルールに作成したターゲットグループへの転送ルールを追加する。今回は既に80は使われているので、8080で転送する。<br>
+⇒REST APIが機能していることを確認する。<br></p>
 </div>
-<div class="paragraph data-line-93">
+<div class="paragraph data-line-99">
 <p>・DBへの接続情報は下記の記事を参考にParameter Storeに格納し、コンテナのデプロイ時に環境変数として展開する。</p>
 </div>
-<div class="paragraph data-line-95">
+<div class="paragraph data-line-101">
 <p><a href="https://dev.classmethod.jp/articles/ecs-secrets/" class="bare">https://dev.classmethod.jp/articles/ecs-secrets/</a></p>
 </div>
-<div class="paragraph data-line-97">
+<div class="paragraph data-line-103">
 <p>・メッセージブローカーはKafkaを選択した。<br>
 　⇒当初はKafkaと比較して軽量なRabbitMQの利用を検討していたが、Eventuate Tram Frameworkにおいて、io.eventuate.tram.core:eventuate-tram-spring-consumer-rabbitmqは提供が終了されており、かつ後継とみられるio.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、アプリ起動時のZooKeeperの設定が上手くいかず解決に時間がかかる可能性が高いと判断したため、今回は使用を断念した。<br>
 (io.eventuate.tram.core:eventuate-tram-consumer-rabbitmqは、リファレンスに記載がないため使用可能なものなのかも不明)</p>
 </div>
-<div class="paragraph data-line-101">
+<div class="paragraph data-line-107">
 <p>Kafkaの使用にあたって、application.ymlに以下を追記する。</p>
 </div>
-<div class="listingblock data-line-104">
+<div class="listingblock data-line-110">
 <div class="content">
 <pre class="highlightjs highlight"><code data-lang="yml" class="language-yml hljs">eventuatelocal:
   kafka:
@@ -578,26 +586,22 @@ microservices.ioを公開している、設計コンサルタントのChris Rich
       servers: ${DOCKER_HOST_IP:localhost}:9092</code></pre>
 </div>
 </div>
-<div class="paragraph data-line-111">
+<div class="paragraph data-line-117">
 <p>また、リファレンス通りにConfigurationでEventuateTramKafkaMessageConsumerConfiguration.classをimportするだけでは不十分であり、以下のBean定義が必要。(DuplicateMessageDetectorの定義は複数あるが、今回は最も単純なものを選択した)</p>
 </div>
-<div class="listingblock data-line-114">
+<div class="listingblock data-line-120">
 <div class="content">
 <pre class="highlightjs highlight"><code data-lang="java" class="language-java hljs">@Bean
 public DuplicateMessageDetector duplicateMessageDetector() { return new NoopDuplicateMessageDetector(); }</code></pre>
 </div>
 </div>
-<div class="paragraph data-line-119">
+<div class="paragraph data-line-125">
 <p>次に、アプリケーション側でKafkaを利用できるように、Amazon MSKクラスタを作成する。<br>
 Web上に特に記事がなく、公式リファレンスではAWS CLIでのチュートリアルしか存在しないため、以下に手順を記載する。<br></p>
 </div>
-<div class="olist arabic data-line-122">
-<ol class="arabic">
-<li class="data-line-122">
-<p>サービス一覧からAmazon MSKを選択する。<br></p>
-</li>
-<li class="data-line-123">
-<p>以下の項目を入力し、「クラスターの作成」ボタンを押下する。<br>
+<div class="paragraph data-line-128">
+<p>■1. サービス一覧からAmazon MSKを選択する。<br>
+■2. 以下の項目を入力し、「クラスターの作成」ボタンを押下する。<br>
 　クラスターの作成方法：カスタム作成<br>
 　クラスター名：ma-ftgo<br>
 　Apache kafkaバージョン：2.6.2(デフォルト)<br>
@@ -618,18 +622,170 @@ Web上に特に記事がなく、公式リファレンスではAWS CLIでのチ�
 　保管時のデータの暗号化：AWS管理CMKの利用(デフォルト)<br>
 　このクラスターのAmazon CloudWatchメトリクス：基本モニタリング(デフォルト)<br>
 　Prometheus でオープンモニタリングを有効にする：無効(デフォルト)<br>
-　ブローカーログの配信：すべて無効<br></p>
-</li>
-<li class="data-line-145">
-<p>15分程度待つ。</p>
-</li>
-</ol>
+　ブローカーログの配信：すべて無効<br>
+■3. 15分程度待つ。<br>
+■4. Amazon MSKクラスタが作成されたら、Amazon MSKクラスタに紐づいているセキュリティグループにて、接続元のECSのEC2インスタンスのセキュリティグループからのアクセスを許可する。</p>
+</div>
+<div class="paragraph data-line-154">
+<p>Amazon MSKクラスタが作成できたら、以下の手順でトピックを作成する。</p>
+</div>
+<div class="paragraph data-line-156">
+<p>■1. トピックを作成する操作を行うIAMロールに「AmazonMSKFullAccess」ポリシーをアタッチする。<br>
+■2. 1でポリシーをアタッチしたIAMロールで、Session Managerで作業用EC2インスタンスにログインする。<br>
+■3. 以下のコマンドでkafkaをインストールする。<br></p>
+</div>
+<div class="listingblock data-line-161">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">cd ~
+sudo wget https://archive.apache.org/dist/kafka/2.8.0/kafka_2.12-2.8.0.tgz
+sudo tar -xzf kafka_2.12-2.8.0.tgz
+sudo rm kafka_2.12-2.8.0.tgz
+cd kafka_2.12-2.8.0</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-169">
+<p>■4. aws kafka describe-clusterコマンドを実行し、MSKクラスタの情報を取得する。--cruster-arnオプションに指定する値(<strong>ARN(Amazon Resource Name)</strong>)は、AWSコンソールで当該MSKの情報を確認して取得する。<br></p>
+</div>
+<div class="listingblock data-line-172">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">sh-4.2$ aws kafka describe-cluster --region ap-northeast-1 --cluster-arn arn:aws:kafka:ap-northeast-1:626394096352:cluster/ma-ftgo/4cd87c94-9dcc-484a-b21e-1adae04798f4-2
+{
+    "ClusterInfo": {
+        "LoggingInfo": {
+            "BrokerLogs": {
+                "S3": {
+                    "Enabled": false
+                },
+                "Firehose": {
+                    "Enabled": false
+                },
+                "CloudWatchLogs": {
+                    "Enabled": false
+                }
+            }
+        },
+        "EncryptionInfo": {
+            "EncryptionInTransit": {
+                "ClientBroker": "PLAINTEXT",
+                "InCluster": true
+            },
+            "EncryptionAtRest": {
+                "DataVolumeKMSKeyId": "arn:aws:kms:ap-northeast-1:626394096352:key/8b48bd91-2b84-4dd4-8f6e-8ab8a7f09324"
+            }
+        },
+        "BrokerNodeGroupInfo": {
+            "BrokerAZDistribution": "DEFAULT",
+            "ClientSubnets": [
+                "subnet-03cf44c1c2ed81ff2",
+                "subnet-0de6e640973079d1a"
+            ],
+            "StorageInfo": {
+                "EbsStorageInfo": {
+                    "VolumeSize": 100
+                }
+            },
+            "SecurityGroups": [
+                "sg-005f51aff472afb88"
+            ],
+            "InstanceType": "kafka.t3.small"
+        },
+        "ClusterName": "ma-ftgo",
+        "CurrentBrokerSoftwareInfo": {
+            "KafkaVersion": "2.6.2"
+        },
+        "Tags": {},
+        "CreationTime": "2021-08-30T06:26:30.529Z",
+        "NumberOfBrokerNodes": 2,
+        "ZookeeperConnectString": "z-2.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-1.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-3.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181",
+        "State": "ACTIVE",
+        "CurrentVersion": "K2EUQ1WTGCTBG2",
+        "ClusterArn": "arn:aws:kafka:ap-northeast-1:626394096352:cluster/ma-ftgo/4cd87c94-9dcc-484a-b21e-1adae04798f4-2",
+        "EnhancedMonitoring": "DEFAULT",
+        "OpenMonitoring": {
+            "Prometheus": {
+                "NodeExporter": {
+                    "EnabledInBroker": false
+                },
+                "JmxExporter": {
+                    "EnabledInBroker": false
+                }
+            }
+        }
+    }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-240">
+<p>■5. kafkaに含まれるkafka-topics.shを利用してTopicを作成する。--zookeeperオプションには、ws kafka describe-clusterコマンドで取得した*ZookeeperConnectString*の値を指定する。コマンド実行後、Created topic &lt;Topic名&gt;が出力されることを確認する。</p>
+</div>
+<div class="listingblock data-line-243">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">sh-4.2$ bin/kafka-topics.sh --create --zookeeper z-2.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-1.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-3.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181 --replication-factor 2 --partitions 1 --topic com.ftgo.OrderService.saga.CreateOrderSaga-reply
+OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic com.ftgo.OrderService.saga.CreateOrderSaga-reply.</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-250">
+<p><strong>■注意点</strong><br>
+・サーガオーケストレータとして必要なTopic名は、Eventuate Tram Framework内で以下の命名規則に従って生成される。<br></p>
+</div>
+<div class="paragraph data-line-253">
+<p><strong>&lt;Sagaの完全修飾名&gt;-reply</strong></p>
+</div>
+<div class="paragraph data-line-255">
+<p>また、サーガ参加者として購読するTopic名は、CommandHandlersBuilder.fromChannel()で指定したものであるため、同名のTopicを作成しておく。</p>
+</div>
+<div class="paragraph data-line-257">
+<p>・Topicを削除するには以下のようなコマンドを入力する。</p>
+</div>
+<div class="listingblock data-line-260">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">bin/kafka-topics.sh --delete --zookeeper z-2.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-1.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-3.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181 --topic FtgoTopic
+OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
+Topic FtgoTopic is marked for deletion.
+Note: This will have no impact if delete.topic.enable is not set to true.</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-267">
+<p>・Topicの一覧を確認するには以下のようなコマンドを入力する。</p>
+</div>
+<div class="listingblock data-line-270">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs"> bin/kafka-topics.sh --list --zookeeper z-2.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-1.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181,z-3.ma-ftgo.ppt6xb.c2.kafka.ap-northeast-1.amazonaws.com:2181
+OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
+__amazon_msk_canary
+__amazon_msk_canary_state
+__consumer_offsets
+com.ftgo.OrderService.saga.CreateOrderSaga-reply</code></pre>
+</div>
+</div>
+<div class="paragraph data-line-279">
+<p>・デバッグや動作確認をECS上で実施すると、Docker Imageの差し替えなどで非常に労力がかかるため、動作確認はEC2インスタンス上で実施すると良い。<br>
+　⇒試験用にセキュリティグループの設定を行い、試験用のターゲットグループを用意し、ALBに紐づける。</p>
+</div>
+<div class="paragraph data-line-282">
+<p>・RDSで接続しているDBがPostgreSQLだと、Eventuate Tram Framework内でクロスDB参照が発生しエラーになるため、Eventuate Tram Frameworkを使用するならばリポジトリが向くDBはMySQLであること。</p>
+</div>
+<div class="paragraph data-line-284">
+<p>テーブル作成のみ実施するために、MySQLのクライアントのみをEC2インスタンスにインストールする。以下の手順に従って実施する。<br></p>
+</div>
+<div class="paragraph data-line-286">
+<p><a href="https://qiita.com/ponsuke0531/items/3ae69a9d477809c00917" class="bare">https://qiita.com/ponsuke0531/items/3ae69a9d477809c00917</a></p>
+</div>
+<div class="paragraph data-line-288">
+<p>・MySQLでDBを準備したが、Eventuate Tram Frameworkで利用されるDBを用意する必要がある。</p>
+</div>
+<div class="listingblock data-line-291">
+<div class="content">
+<pre class="highlightjs highlight"><code data-lang="shell" class="language-shell hljs">org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [insert into eventuate.message(id, destination, headers, payload, creation_time, published) values(?, ?, ?, ?, ROUND(UNIX_TIMESTAMP(CURTIME(4)) * 1000), ?)]; nested exception is java.sql.SQLSyntaxErrorException: Unknown database 'eventuate'</code></pre>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-08-30 17:45:56 +0900
+Last updated 2021-09-06 18:10:41 +0900
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/github.min.css">
